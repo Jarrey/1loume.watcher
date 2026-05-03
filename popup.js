@@ -343,6 +343,7 @@ async function initialize() {
 }
 
 const MIN_POPUP_HEIGHT = 420;
+const FILTER_STATE_KEY = '1loume_popup_filter_state';
 
 function getViewportHeight() {
   return Math.round(
@@ -372,6 +373,33 @@ function schedulePopupHeightLock() {
   requestAnimationFrame(() => {
     requestAnimationFrame(lockPopupViewportHeight);
   });
+}
+
+function loadFilterState() {
+  let saved = null;
+
+  try {
+    saved = JSON.parse(localStorage.getItem(FILTER_STATE_KEY) || 'null');
+  } catch (_error) {
+    saved = null;
+  }
+
+  if (saved?.filter === 'matched' || saved?.filter === 'all') {
+    state.filter = saved.filter;
+  }
+
+  if (saved?.overlayFilters && typeof saved.overlayFilters === 'object') {
+    Object.keys(state.overlayFilters).forEach((key) => {
+      state.overlayFilters[key] = Boolean(saved.overlayFilters[key]);
+    });
+  }
+}
+
+function persistFilterState() {
+  localStorage.setItem(FILTER_STATE_KEY, JSON.stringify({
+    filter: state.filter,
+    overlayFilters: state.overlayFilters
+  }));
 }
 
 // Keywords panel collapse/expand
@@ -408,6 +436,7 @@ elements.rescanButton.addEventListener('click', () => {
 elements.filterButtons.forEach((button) => {
   button.addEventListener('click', () => {
     state.filter = button.dataset.filter;
+    persistFilterState();
     renderSummary();
   });
 });
@@ -416,8 +445,11 @@ elements.overlayFilterButtons.forEach((button) => {
   button.addEventListener('click', () => {
     const filterName = button.dataset.overlayFilter;
     state.overlayFilters[filterName] = !state.overlayFilters[filterName];
+    persistFilterState();
     renderSummary();
   });
 });
+
+loadFilterState();
 
 initialize().catch((error) => setStatus(error.message, true));
