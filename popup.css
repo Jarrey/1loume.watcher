@@ -277,7 +277,7 @@ button.secondary,
 .results {
   list-style: none;
   margin: 0;
-  padding: 0 8px 0 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -286,9 +286,12 @@ button.secondary,
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(56, 189, 248, 0.5) rgba(148, 163, 184, 0.12);
+}
+
+.results.has-scrollbar {
+  padding-right: 8px;
 }
 
 .results::-webkit-scrollbar {
@@ -396,6 +399,33 @@ button.secondary,
   display: flex;
   flex-direction: column;
   gap: 5px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(249, 115, 22, 0.6) rgba(148, 163, 184, 0.12);
+}
+
+.attach-list.has-scrollbar {
+  padding-right: 8px;
+}
+
+.attach-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.attach-list::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.12);
+  border-radius: 2px;
+}
+
+.attach-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(254, 215, 170, 0.78), rgba(249, 115, 22, 0.72));
+  border-radius: 2px;
+  border: 2px solid rgba(9, 16, 29, 0.72);
+}
+
+.attach-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 233, 213, 0.86), rgba(251, 146, 60, 0.82));
 }
 
 .attach-item {

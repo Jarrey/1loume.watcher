@@ -102,6 +102,20 @@ function appendHighlightedTitle(link, title, keywords) {
   }
 }
 
+function updateListScrollbarState(element) {
+  if (!element) {
+    return;
+  }
+
+  const hasVerticalScrollbar = element.scrollHeight - element.clientHeight > 1;
+  element.classList.toggle('has-scrollbar', hasVerticalScrollbar);
+}
+
+function syncListScrollbarStates() {
+  updateListScrollbarState(elements.resultsList);
+  updateListScrollbarState(elements.attachList);
+}
+
 function renderList() {
   const scan = state.scan;
   const items = scan?.items || [];
@@ -151,6 +165,7 @@ function renderList() {
   });
 
   elements.emptyState.classList.toggle('hidden', visibleItems.length > 0);
+  syncListScrollbarStates();
 }
 
 function renderAttachments() {
@@ -180,6 +195,8 @@ function renderAttachments() {
     li.appendChild(link);
     elements.attachList.appendChild(li);
   });
+
+  syncListScrollbarStates();
 }
 
 function renderSummary() {
@@ -326,6 +343,8 @@ setKeywordsExpanded(localStorage.getItem(KEYWORDS_EXPANDED_KEY) === 'true');
 schedulePopupHeightLock();
 window.addEventListener('resize', schedulePopupHeightLock);
 window.visualViewport?.addEventListener('resize', schedulePopupHeightLock);
+window.addEventListener('resize', syncListScrollbarStates);
+window.visualViewport?.addEventListener('resize', syncListScrollbarStates);
 
 elements.saveButton.addEventListener('click', () => {
   saveKeywords().catch((error) => setStatus(error.message, true));
