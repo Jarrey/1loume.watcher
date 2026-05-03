@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1lou Keyword Watcher</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <p class="eyebrow">1lou.me 关键词提醒</p>
+      </header>
+
+      <section class="panel keywords-panel" id="keywordsPanel">
+        <button class="keywords-toggle" id="keywordsToggle" aria-expanded="false">
+          <span class="section-title">感兴趣关键词</span>
+          <span class="toggle-arrow" aria-hidden="true"></span>
+        </button>
+        <div class="keywords-body" id="keywordsBody">
+          <p class="hint">支持多个关键词，使用换行、英文逗号或中文逗号分隔。</p>
+          <textarea id="keywordsInput" rows="3" placeholder="例如：4K&#10;国漫&#10;杜比"></textarea>
+          <div class="actions">
+            <button id="saveButton">保存关键词</button>
+            <span id="saveStatus" class="status"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel compact">
+        <div class="summary-row">
+          <div class="summary-info">
+            <p class="section-title inline-title">当前页面</p>
+            <p id="pageMeta" class="meta">尚未检测到 1lou 页面</p>
+          </div>
+          <div class="stats">
+            <span id="matchCount" class="stat">0 命中</span>
+            <span id="itemCount" class="stat muted">0 主题</span>
+          </div>
+        </div>
+        <div class="filter-row">
+          <button data-filter="matched" class="filter active">仅看命中</button>
+          <button data-filter="all" class="filter">全部主题</button>
+          <button id="rescanButton" class="filter">重扫</button>
+        </div>
+      </section>
+
+      <section id="attachPanel" class="panel attach-panel hidden">
+        <p class="section-title attach-title">📥 BT 种子附件</p>
+        <ul id="attachList" class="attach-list"></ul>
+      </section>
+
+      <section class="panel list-panel">
+        <ul id="resultsList" class="results"></ul>
+        <p id="emptyState" class="empty">打开 1lou.me 列表页后，插件会自动扫描当前页面。</p>
+      </section>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
