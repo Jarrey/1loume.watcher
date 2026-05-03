@@ -2,7 +2,13 @@ const state = {
   activeTabId: null,
   keywords: [],
   scan: null,
-  filter: 'matched'
+  filter: 'matched',
+  overlayFilters: {
+    '1080p': false,
+    '4k': false,
+    mp4: false,
+    mkv: false
+  }
 };
 
 const elements = {
@@ -19,8 +25,47 @@ const elements = {
   attachList: document.getElementById('attachList'),
   keywordsToggle: document.getElementById('keywordsToggle'),
   keywordsBody: document.getElementById('keywordsBody'),
-  filterButtons: Array.from(document.querySelectorAll('[data-filter]'))
+  filterButtons: Array.from(document.querySelectorAll('[data-filter]')),
+  overlayFilterButtons: Array.from(document.querySelectorAll('[data-overlay-filter]'))
 };
+
+function getActiveOverlayFilters() {
+  return Object.entries(state.overlayFilters)
+    .filter(([, enabled]) => enabled)
+    .map(([name]) => name);
+}
+
+function matchOverlayFilter(title, filterName) {
+  const text = String(title || '').toLowerCase();
+
+  if (filterName === '1080p') {
+    return /(^|[^0-9])1080p([^0-9]|$)|1920x1080|fhd/.test(text);
+  }
+
+  if (filterName === '4k') {
+    return /(^|[^0-9])4k([^0-9]|$)|2160p|3840x2160|uhd/.test(text);
+  }
+
+  if (filterName === 'mp4') {
+    return /(^|\W)mp4(\W|$)/.test(text);
+  }
+
+  if (filterName === 'mkv') {
+    return /(^|\W)mkv(\W|$)/.test(text);
+  }
+
+  return true;
+}
+
+function applyOverlayFilters(items) {
+  const activeOverlayFilters = getActiveOverlayFilters();
+
+  if (!activeOverlayFilters.length) {
+    return items;
+  }
+
+  return items.filter((item) => activeOverlayFilters.every((filterName) => matchOverlayFilter(item.title, filterName)));
+}
 
 function splitKeywords(input) {
   return Array.from(new Set(String(input || '')
@@ -121,9 +166,10 @@ function renderList() {
   const items = scan?.items || [];
   const matchedUrls = new Set((scan?.matchedItems || []).map((item) => item.url));
   const matchedLookup = new Map((scan?.matchedItems || []).map((item) => [item.url, item]));
-  const visibleItems = state.filter === 'matched'
+  const baseVisibleItems = state.filter === 'matched'
     ? items.filter((item) => matchedUrls.has(item.url))
     : items;
+  const visibleItems = applyOverlayFilters(baseVisibleItems);
 
   elements.resultsList.innerHTML = '';
 
@@ -216,6 +262,11 @@ function renderSummary() {
 
   elements.filterButtons.forEach((button) => {
     button.classList.toggle('active', button.dataset.filter === state.filter);
+  });
+
+  elements.overlayFilterButtons.forEach((button) => {
+    const filterName = button.dataset.overlayFilter;
+    button.classList.toggle('active', Boolean(state.overlayFilters[filterName]));
   });
 
   renderList();
@@ -357,6 +408,14 @@ elements.rescanButton.addEventListener('click', () => {
 elements.filterButtons.forEach((button) => {
   button.addEventListener('click', () => {
     state.filter = button.dataset.filter;
+    renderSummary();
+  });
+});
+
+elements.overlayFilterButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const filterName = button.dataset.overlayFilter;
+    state.overlayFilters[filterName] = !state.overlayFilters[filterName];
     renderSummary();
   });
 });

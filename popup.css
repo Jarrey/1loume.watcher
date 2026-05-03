@@ -194,6 +194,12 @@ body {
   justify-content: flex-start;
   gap: 6px;
   margin-top: 6px;
+  flex-wrap: nowrap;
+}
+
+.filter-spacer {
+  width: 8px;
+  flex: 0 0 8px;
 }
 
 textarea {
