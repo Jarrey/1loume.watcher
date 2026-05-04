@@ -296,6 +296,30 @@ async function refreshState() {
   renderSummary();
 }
 
+function watchActiveTabChanges() {
+  chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    if (activeInfo.tabId === state.activeTabId) {
+      return;
+    }
+
+    refreshState().catch(() => {});
+  });
+
+  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+    if (tabId !== state.activeTabId) {
+      return;
+    }
+
+    if (changeInfo.status === 'complete' || changeInfo.url) {
+      refreshState().catch(() => {});
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    refreshState().catch(() => {});
+  });
+}
+
 async function saveKeywords() {
   await syncActiveTab();
 
@@ -451,5 +475,6 @@ elements.overlayFilterButtons.forEach((button) => {
 });
 
 loadFilterState();
+watchActiveTabChanges();
 
 initialize().catch((error) => setStatus(error.message, true));
