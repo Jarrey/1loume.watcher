@@ -1,5 +1,7 @@
 const state = {
   activeTabId: null,
+  activeTabUrl: '',
+  activeTabStatus: 'complete',
   keywords: [],
   scan: null,
   filter: 'matched',
@@ -28,6 +30,13 @@ const elements = {
   filterButtons: Array.from(document.querySelectorAll('[data-filter]')),
   overlayFilterButtons: Array.from(document.querySelectorAll('[data-overlay-filter]'))
 };
+
+const SUPPORTED_SITE_PATTERN = /^https:\/\/(www\.)?1lou\.me\//i;
+const AUTO_RESCAN_DELAY_MS = 450;
+const AUTO_RESCAN_RETRY_MS = 700;
+
+let pendingAutoRescan = null;
+let pendingAutoRescanKey = '';
 
 function getActiveOverlayFilters() {
   return Object.entries(state.overlayFilters)
@@ -82,7 +91,22 @@ async function getActiveTab() {
 async function syncActiveTab() {
   const activeTab = await getActiveTab();
   state.activeTabId = activeTab?.id ?? null;
+  state.activeTabUrl = activeTab?.url || '';
+  state.activeTabStatus = activeTab?.status || 'complete';
   return activeTab;
+}
+
+function isSupportedActiveTab() {
+  return SUPPORTED_SITE_PATTERN.test(state.activeTabUrl || '');
+}
+
+function clearPendingAutoRescan() {
+  window.clearTimeout(pendingAutoRescan);
+  pendingAutoRescan = null;
+}
+
+function getAutoRescanKey() {
+  return `${state.activeTabId || 'none'}|${state.activeTabUrl || ''}`;
 }
 
 function formatTime(value) {
@@ -255,7 +279,13 @@ function renderSummary() {
   elements.itemCount.textContent = `${totalCount} 主题`;
 
   if (!scan) {
-    elements.pageMeta.textContent = '当前标签页不是 1lou.me，或页面尚未被扫描。';
+    if (isSupportedActiveTab() && state.activeTabStatus !== 'complete') {
+      elements.pageMeta.textContent = '页面正在加载，加载完成后会自动扫描。';
+    } else if (isSupportedActiveTab()) {
+      elements.pageMeta.textContent = '当前页面已切换，正在等待自动扫描。';
+    } else {
+      elements.pageMeta.textContent = '当前标签页不是 1lou.me，或页面尚未被扫描。';
+    }
   } else {
     elements.pageMeta.textContent = `最近扫描：${formatTime(scan.scannedAt)}`;
   }
@@ -273,10 +303,59 @@ function renderSummary() {
   renderAttachments();
 }
 
-async function refreshState() {
+function scheduleAutoRescan() {
+  clearPendingAutoRescan();
+
+  if (typeof state.activeTabId !== 'number' || !isSupportedActiveTab()) {
+    pendingAutoRescanKey = '';
+    return;
+  }
+
+  if (state.scan?.pageUrl === state.activeTabUrl) {
+    pendingAutoRescanKey = '';
+    return;
+  }
+
+  const autoRescanKey = getAutoRescanKey();
+
+  if (state.activeTabStatus !== 'complete') {
+    pendingAutoRescanKey = '';
+    pendingAutoRescan = window.setTimeout(() => {
+      refreshState({ autoRescan: true }).catch(() => {});
+    }, AUTO_RESCAN_RETRY_MS);
+    return;
+  }
+
+  if (pendingAutoRescanKey === autoRescanKey) {
+    return;
+  }
+
+  pendingAutoRescanKey = autoRescanKey;
+  pendingAutoRescan = window.setTimeout(async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'triggerRescan',
+        tabId: state.activeTabId
+      });
+
+      if (response?.ok) {
+        await refreshState();
+      }
+    } catch (_error) {
+      pendingAutoRescanKey = '';
+    } finally {
+      clearPendingAutoRescan();
+    }
+  }, AUTO_RESCAN_DELAY_MS);
+}
+
+async function refreshState(options = {}) {
+  const { autoRescan = false } = options;
   await syncActiveTab();
 
   if (typeof state.activeTabId !== 'number') {
+    clearPendingAutoRescan();
+    pendingAutoRescanKey = '';
     state.scan = null;
     renderSummary();
     return;
@@ -294,6 +373,10 @@ async function refreshState() {
   state.keywords = response.keywords || [];
   state.scan = response.scan;
   renderSummary();
+
+  if (autoRescan) {
+    scheduleAutoRescan();
+  }
 }
 
 function watchActiveTabChanges() {
@@ -302,7 +385,7 @@ function watchActiveTabChanges() {
       return;
     }
 
-    refreshState().catch(() => {});
+    refreshState({ autoRescan: true }).catch(() => {});
   });
 
   chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
@@ -311,12 +394,12 @@ function watchActiveTabChanges() {
     }
 
     if (changeInfo.status === 'complete' || changeInfo.url) {
-      refreshState().catch(() => {});
+      refreshState({ autoRescan: true }).catch(() => {});
     }
   });
 
   window.addEventListener('focus', () => {
-    refreshState().catch(() => {});
+    refreshState({ autoRescan: true }).catch(() => {});
   });
 }
 
@@ -363,7 +446,7 @@ async function triggerRescan() {
 
 async function initialize() {
   await syncActiveTab();
-  await refreshState();
+  await refreshState({ autoRescan: true });
 }
 
 const MIN_POPUP_HEIGHT = 420;
